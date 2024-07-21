@@ -3,7 +3,7 @@ import { ScheduleType } from '@app/global/enum';
 import { throwRpcError } from '@app/global/errors';
 import { Schedule } from '@app/global/model/entity';
 import { ScheduleRepository } from '@app/global/model/repository';
-import { CreateScheduleDto } from '@app/global/schema/dto/schedule.dto';
+import { CreateScheduleDto } from '@app/global/schema/dto';
 import { InjectQueue } from '@nestjs/bull';
 import { Injectable } from '@nestjs/common';
 import { Queue } from 'bull';
@@ -53,15 +53,35 @@ export class SchedularSvcService {
     scheduleId: number;
     scheduleType: ScheduleType;
   }) {
-    const { ttl: delay, scheduleId: id, scheduleType } = data;
-    const queueData = { id };
-    const queueProcessName =
-      scheduleType === ScheduleType.ONE_OFF
-        ? QUEUE_PROCESS_NAME.ONE_OFF_JOB_PROCESS
-        : QUEUE_PROCESS_NAME.PERIODIC_JOB_PROCESS;
-    await this.scheduleQueue.add(queueProcessName, queueData, {
-      delay,
-      removeOnComplete: true,
-    });
+    try {
+      const { ttl: delay, scheduleId: id, scheduleType } = data;
+      const queueData = { id };
+      const queueProcessName =
+        scheduleType === ScheduleType.ONE_OFF
+          ? QUEUE_PROCESS_NAME.ONE_OFF_JOB_PROCESS
+          : QUEUE_PROCESS_NAME.PERIODIC_JOB_PROCESS;
+      await this.scheduleQueue.add(queueProcessName, queueData, {
+        delay,
+        removeOnComplete: true,
+      });
+    } catch (error) {
+      throwRpcError(error);
+    }
+  }
+
+  async getJobScheduleList() {
+    try {
+      return await this.scheduleRepo.find({ order: { id: 'DESC' } });
+    } catch (error) {
+      throwRpcError(error);
+    }
+  }
+
+  async getJobSchedule(id: number) {
+    try {
+      return await this.scheduleRepo.findOne({ where: { id } });
+    } catch (error) {
+      throwRpcError(error);
+    }
   }
 }
